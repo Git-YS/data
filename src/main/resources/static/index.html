@@ -1,10 +1,189 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cn">
 <head>
     <meta charset="UTF-8">
     <title>首页</title>
+    <link href="assets/images/favicon.ico" rel="icon" type="image/x-ico">
+    <link rel="stylesheet" type="text/css" href="https://www.layuicdn.com/layui/css/layui.css"/>
+    <style>
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-    <h1>这是一个测试页面</h1>
+<div style="text-align: center;top: 50vh; transform: translateY(50%)">
+    <h1>这是一个测试页面1</h1>
+    <button id="upload-btn" class="layui-btn layui-btn-primary"><i class="layui-icon">&#xe67c;</i>上传文件</button>
+</div>
+<script
+        src="https://code.jquery.com/jquery-3.4.1.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+        crossorigin="anonymous"></script>
+<script src="https://www.layuicdn.com/layui/layui.js"></script>
+<script type="text/javascript">
+    document.read
+    layui.use(['laydate', 'laypage', 'layer', 'table', 'carousel', 'upload', 'element'], function () {
+        var laydate = layui.laydate //日期
+            , laypage = layui.laypage //分页
+            , layer = layui.layer //弹层
+            , table = layui.table //表格
+            , carousel = layui.carousel //轮播
+            , upload = layui.upload //上传
+            , element = layui.element //元素操作
+            , laytpl = layui.laytpl;
+
+        $('#upload-btn').on('click', function () {
+            layer.open({
+                title: '文件导入'
+                , type: 1
+                , content: laytpl($('#tpl-dialog').html()).render({name: '贤心'})
+                , area: [600, 600]
+                , success: function () {
+
+                    $('#previous').click(function () {
+                        var cur = $('.step.active').attr('step');
+                        var $prev = $('.step[step="' + (cur * 1 - 1) + '"]');
+                        if ($prev.length > 0) {
+                            $prev.addClass('active').siblings().removeClass('active');
+                            if ($('.step[step="' + (cur * 1 - 2) + '"]').length > 0) {
+                                $(this).show();
+                                $('#next').show();
+                            } else {
+                                $(this).hide();
+                            }
+                        }
+                    });
+                    $('#next').click(function () {
+                        var cur = $('.step.active').attr('step');
+                        var $next = $('.step[step="' + (cur * 1 + 1) + '"]');
+                        if ($next.length > 0) {
+                            $next.addClass('active').siblings().removeClass('active');
+                            if ($('.step[step="' + (cur * 1 + 2) + '"]').length > 0) {
+                                $(this).show();
+                                $('#previous').show();
+                            } else {
+                                $(this).hide();
+                            }
+                        }
+                    })
+                }
+            })
+        });
+
+        /*layer弹出一个示例*/
+        var uploadInst = upload.render({
+            elem: '#upload' //绑定元素
+            , url: '/upload/' //上传接口
+            // ,acceptMime: ''
+            , accept: 'file' //允许上传的文件类型
+            , exts: 'xls|xlsx'
+            , size: 50 //最大允许上传的文件大小
+            , progress: function (n) {
+                var percent = n + '%' //获取进度百分比
+                element.progress('file', percent); //可配合 layui 进度条元素使用
+            }
+            , done: function (res) {
+                if (res && res.code === 0) {
+
+                } else {
+                    layer.msg('上传失败');
+                }
+            }
+            , error: function () {
+                //请求异常回调
+                layer.msg('服务器异常');
+            }
+        });
+    });
+</script>
+<script type="text/html" id="tpl-dialog1">
+    <div>
+        <div class="layui-col-xs12 ">
+            <ul>
+                {{# layui.each(d.list, function(index, item){ }}
+                <li>
+                    <input type="checkbox" name="sheets" title="{{item.name}}" value="{{item.id}}" lay-skin="primary">
+                </li>
+                {{# }); }}
+            </ul>
+        </div>
+        <div class="layui-col-xs12"></div>
+    </div>
+</script>
+<script type="text/html" id="tpl-dialog">
+    <div id="step-1" class="step active" step="1">
+        <div class="layui-col-xs12">
+            <div>
+                <span class="layui-col-xs4">待上传文件：<p class="file"></p></span>
+                <button id="upload" class="layui-btn layui-btn-primary"><i class="layui-icon">&#xe67c;</i>添加文件</button>
+            </div>
+            <div class="layui-progress layui-progress-big" lay-showpercent="true" lay-filter="demo">
+                <div class="layui-progress-bar layui-bg-red" lay-percent="0%"></div>
+            </div>
+        </div>
+        <div class="layui-col-xs12">
+            <form>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">字段名行</label>
+                    <div class="layui-input-block">
+                        <input type="number" name="header" lay-verify="title" autocomplete="off" placeholder="请输入标题"
+                               class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">第一个数据行</label>
+                    <div class="layui-input-block">
+                        <input type="number" name="first" lay-verify="title" autocomplete="off" placeholder="请输入第一个数据行"
+                               class="layui-input">
+                    </div>
+                </div>
+                <div class="layui-form-item">
+                    <label class="layui-form-label">最后一个数据行</label>
+                    <div class="layui-input-block">
+                        <input type="number" name="last" lay-verify="title" autocomplete="off" placeholder="请输入最后一个数据行"
+                               class="layui-input">
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="step-2" class="step" step="2">
+        <div class="layui-col-xs12">
+            <div class=""></div>
+        </div>
+        <div class="layui-col-xs12">
+            <table>
+                <thead>
+                <th></th>
+                </thead>
+                <tbody>
+                <tr></tr>
+                <tr>...</tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="step-3" class="step" step="3">
+        <div class="layui-col-xs12">
+            <div class="success">成功</div>
+            <div class="fail">失败</div>
+        </div>
+        <div class="layui-col-xs12">
+        </div>
+    </div>
+    <div class="footer layui-col-xs12" style="float: right;">
+        <button id="previous" class="layui-btn layui-btn-normal" style="display: none;"><i
+                class="layui-icon layui-icon-prev"></i>上一步
+        </button>
+        <button id="next" class="layui-btn layui-btn-normal">下一步<i class="layui-icon layui-icon-next"></i></button>
+        <button id="cancel" class="layui-btn layui-btn-normal">取消</button>
+    </div>
+</script>
 </body>
 </html>
