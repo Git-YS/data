@@ -16,13 +16,11 @@ import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 @Service
 public class DataServiceImpl implements IDataService {
 
     public static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
-    public static final DateTimeFormatter DATE_FORMATE_FILE = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
 
     @Override
@@ -56,9 +54,9 @@ public class DataServiceImpl implements IDataService {
     /**
      * 获取复杂表头
      *
-     * @param headRows
-     * @param cruSheet
-     * @return
+     * @param headRows 标题行数
+     * @param cruSheet 当前sheet
+     * @return 行号：标题名
      */
     private Map<Integer, String> getHeader(int headRows, Sheet cruSheet) {
         Map<Integer, String> thNames = new HashMap<>(16);
