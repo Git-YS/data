@@ -9,7 +9,18 @@
     <style>
         .step {
             display: none;
+        }
 
+        .step.active {
+            display: block;
+        }
+
+        .step .sheets > table {
+            display: none;
+        }
+
+        .step .sheets > table.active {
+            display: block;
         }
 
         .content, .footer {
@@ -21,9 +32,6 @@
             bottom: 0;
         }
 
-        .step.active {
-            display: block;
-        }
 
         .right {
             float: right;
@@ -47,6 +55,10 @@
         .file-name, .layui-form-label {
             text-align: left;
         }
+
+        .sheet td {
+            border: 1px solid #e2e2e2;
+        }
     </style>
 </head>
 <body>
@@ -60,8 +72,7 @@
         crossorigin="anonymous"></script>
 <script src="https://www.layuicdn.com/layui/layui.js"></script>
 <script type="text/javascript">
-    document.read
-    layui.use(['laydate', 'laypage', 'layer', 'table', 'carousel', 'upload', 'element'], function () {
+    layui.use(['laydate', 'laypage', 'layer', 'table', 'carousel', 'upload', 'element', 'form'], function () {
         var laydate = layui.laydate //日期
             , laypage = layui.laypage //分页
             , layer = layui.layer //弹层
@@ -69,17 +80,19 @@
             , carousel = layui.carousel //轮播
             , upload = layui.upload //上传
             , element = layui.element //元素操作
-            , laytpl = layui.laytpl;
+            , laytpl = layui.laytpl
+            , form = layui.form;
 
         $('#upload-btn').on('click', function () {
             layer.open({
                 title: '文件导入'
                 , type: 1
                 , content: laytpl($('#tpl-dialog').html()).render({})
-                , area: ['600px', '600px']
+                , area: ['1200px', '600px']
                 , resize: false
                 , success: function (layero, index) {
-
+                    form.render(layero);
+                    // 上一步
                     $('#previous').click(function () {
                         var cur = $('.step.active').attr('step');
                         var $prev = $('.step[step="' + (cur * 1 - 1) + '"]');
@@ -93,9 +106,11 @@
                             }
                         }
                     });
+                    //取消：关闭弹窗
                     $('#cancel').click(function () {
                         layer.close(index);
                     })
+                    //文件上传
                     var uploadInst = upload.render({
                         elem: '#upload' //绑定元素
                         ,
@@ -129,13 +144,24 @@
                         }
                         ,
                         progress: function (n) {
-                            var percent = n + '%' //获取进度百分比
-                            element.progress('file', percent); //可配合 layui 进度条元素使用
+                            var percent = n + '%'; //获取进度百分比
+                            element.progress('file-', percent); //可配合 layui 进度条元素使用
                         }
                         ,
                         done: function (res) {
                             if (res && res.code === 0) {
-                                console.log(res.data)
+                                var $sheets = $('#step-2 .sheets'), $select = $('#step-2 select.sheet-sel');
+                                $select.html('<option></option>');
+                                for (var x in res.data) {
+                                    var _datum = res.data[x];
+                                    $select.append('<option value="' + _datum.id + '" >' + _datum.name + '</option>');
+                                    // $sheets.find('table.sheet').removeClass('active')
+                                    $sheets.append(laytpl($('#tpl-sheet').html()).render(_datum))
+                                    // table.render({
+                                    //     elem: '#' + _datum.id
+                                    // });
+                                }
+                                form.render();
                             } else {
                                 layer.msg('上传失败');
                             }
@@ -146,7 +172,7 @@
                             layer.msg('服务器异常');
                         }
                     });
-
+                    //下一步
                     $('#next').click(function () {
                         var cur = $('.step.active').attr('step') * 1;
                         switch (cur) {
@@ -165,12 +191,60 @@
                             }
                         }
                     })
+                    $(layero).on('change', 'select.sheet-sel', function () {
+                        $(layero).find('#'+$(this).val()).addClass('active').siblings().removeClass('active');
+                    })
                 }
             })
         });
 
 
     });
+</script>
+<script type="text/html" id="tpl-sheet">
+    <table id="{{d.id}}" class="sheet">
+        <thead>
+        <tr>
+            {{# for(var i = 0; i < d.previewRows[0].length; i++) { }}
+                <th>
+                    <select name="${{ i } }">
+                        <option></option>
+                        {{# layui.each(d.params, function(index, item){ }}
+                        <option value="{{item.value}}" {{# if( item.value == d.header[d.header.length - 1][i].value){}} selected {{# } }}>{{item.name}}</option>
+                        {{# }); }}
+                    </select>
+                </th>
+            {{# } }}
+        </tr>
+        </thead>
+        <tbody>
+
+        {{# layui.each(d.header, function(ri, row){ }}
+        <tr style="background-color: #1E9FFF;">
+            {{# layui.each(row, function(ci, cell){ }}
+
+            {{# if( cell.value || cell.value === 0){ }}
+            <td {{# if( cell.rowspan > 1){ }} rowspan="{{cell.rowspan}}" {{# } }}
+                {{# if( cell.colspan > 1){ }} colspan="{{cell.colspan}}" {{# } }}
+                >{{cell.value}}</td>
+            {{# } }}
+
+            {{# }); }}
+        </tr>
+        {{# }); }}
+            {{# layui.each(d.previewRows, function(ri, row){ }}
+            <tr>
+            {{# layui.each(row, function(ci, cell){ }}
+                {{# if(cell.value || cell.value === 0){ }}
+                    <td  {{# if( cell.rowspan > 1){ }} rowspan="{{cell.rowspan}}" {{# } }}
+                        {{# if( cell.colspan > 1){ }} colspan="{{cell.colspan}}" {{# } }}
+                        >{{cell.value}}</td>
+                {{# } }}
+            {{# }); }}
+            </tr>
+            {{# }); }}
+        </tbody>
+    </table>
 </script>
 <script type="text/html" id="tpl-file">
     <div class="layui-row file">
@@ -235,19 +309,17 @@
             </div>
         </div>
         <div id="step-2" class="step" step="2">
-            <div class="layui-col-xs12">
-                <div class=""></div>
+            <div class="layui-row">
+                <div class="layui-form-item">
+                    <label class="layui-form-label">选择sheet</label>
+                    <select class="sheet-sel"></select>
+                </div>
             </div>
-            <div class="layui-col-xs12">
-                <table>
-                    <thead>
-                    <th></th>
-                    </thead>
-                    <tbody>
-                    <tr></tr>
-                    <tr>...</tr>
-                    </tbody>
-                </table>
+            <div class="layui-row sheets">
+                <div class="table" id="">
+                    <table>
+                    </table>
+                </div>
             </div>
         </div>
 
