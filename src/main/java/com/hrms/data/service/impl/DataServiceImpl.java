@@ -27,9 +27,19 @@ public class DataServiceImpl implements IDataService {
         wb.sheetIterator().forEachRemaining(s -> {
             ExcelSheet sheet = new ExcelSheet();
             sheet.setName(s.getSheetName());
+            Map<CellAddress, CellRangeAddress> map = new HashMap<>();
             int previewRowNum = query.getFirst() + ExcelSheet.PREVIEW_ROWS;
-            Map<CellAddress, CellRangeAddress> map = s.getMergedRegions().parallelStream().filter(m -> m.getFirstRow() < previewRowNum)
-                    .collect(Collectors.toMap(t -> new CellAddress(t.getFirstRow(), t.getFirstColumn()), t -> t));
+            s.getMergedRegions().parallelStream()
+                    .filter(m -> m.getFirstRow() < previewRowNum)
+                    .forEach(m -> {
+                        if (m.containsRow(query.getFirst())) {
+                            CellRangeAddress data = new CellRangeAddress(query.getFirst(), m.getLastRow(), m.getFirstColumn(), m.getLastColumn());
+                            map.put(new CellAddress(query.getFirst(),m.getFirstColumn()), data);
+                            map.put(new CellAddress(m.getFirstRow(),m.getFirstColumn()),new CellRangeAddress(m.getFirstRow(), query.getFirst() -1 , m.getFirstColumn(), m.getLastColumn()));
+                        }else {
+                            map.put(new CellAddress(m.getFirstRow(),m.getFirstColumn()),m);
+                        }
+                    });
             List<CellRangeAddress> collect = new ArrayList<>(map.values());
             List<List<Object>> header = new ArrayList<>(query.getHeader() + 1);
             List<List<Object>> previewRows = new ArrayList<>(ExcelSheet.PREVIEW_ROWS);
