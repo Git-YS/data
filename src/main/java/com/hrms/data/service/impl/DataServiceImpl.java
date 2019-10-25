@@ -5,6 +5,7 @@ import com.hrms.data.bean.ExcelCell;
 import com.hrms.data.bean.ExcelQuery;
 import com.hrms.data.bean.ExcelSheet;
 import com.hrms.data.service.IDataService;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -28,16 +29,22 @@ public class DataServiceImpl implements IDataService {
             ExcelSheet sheet = new ExcelSheet();
             sheet.setName(s.getSheetName());
             Map<CellAddress, CellRangeAddress> map = new HashMap<>();
+            Map<CellAddress, CellAddress> splitCells = new HashMap<>();
+            Map<CellAddress, Object> values = new HashMap<>();
             int previewRowNum = query.getFirst() + ExcelSheet.PREVIEW_ROWS;
+            //拆分标题栏与数据首行
             s.getMergedRegions().parallelStream()
                     .filter(m -> m.getFirstRow() < previewRowNum)
                     .forEach(m -> {
+                        CellAddress first = new CellAddress(m.getFirstRow(), m.getFirstColumn());
                         if (m.containsRow(query.getFirst())) {
                             CellRangeAddress data = new CellRangeAddress(query.getFirst(), m.getLastRow(), m.getFirstColumn(), m.getLastColumn());
-                            map.put(new CellAddress(query.getFirst(),m.getFirstColumn()), data);
-                            map.put(new CellAddress(m.getFirstRow(),m.getFirstColumn()),new CellRangeAddress(m.getFirstRow(), query.getFirst() -1 , m.getFirstColumn(), m.getLastColumn()));
-                        }else {
-                            map.put(new CellAddress(m.getFirstRow(),m.getFirstColumn()),m);
+                            CellAddress splitAddress = new CellAddress(query.getFirst(), m.getFirstColumn());
+                            map.put(splitAddress, data);
+                            map.put(first, new CellRangeAddress(m.getFirstRow(), query.getFirst() - 1, m.getFirstColumn(), m.getLastColumn()));
+                            splitCells.put(first, splitAddress);
+                        } else {
+                            map.put(first, m);
                         }
                     });
             List<CellRangeAddress> collect = new ArrayList<>(map.values());
@@ -47,7 +54,21 @@ public class DataServiceImpl implements IDataService {
             while (rowIterator.hasNext()) {
                 Row next = rowIterator.next();
                 int rowNum = next.getRowNum();
-                List<Object> list = StreamSupport.stream(next.spliterator(), true).map(cell -> new ExcelCell(cell, map.get(cell.getAddress()))).collect(Collectors.toList());
+                List<Object> list = StreamSupport.stream(next.spliterator(), true)
+                        .filter(cell -> {
+                            CellAddress address = cell.getAddress();
+                            return !StringUtils.isEmpty(cell.toString()) || map.containsKey(address) || splitCells.containsValue(address);
+                        })
+                        .peek(cell -> {
+                            CellAddress address = cell.getAddress();
+                            if (splitCells.containsKey(cell.getAddress())) {
+                                values.put(splitCells.get(address), ExcelUtils.formatCell(cell));
+                            } else if (splitCells.containsValue(cell.getAddress())) {
+                                cell.setCellValue(values.get(address).toString());
+                            }
+                        })
+                        .map(cell -> new ExcelCell(cell, map.get(cell.getAddress())))
+                        .collect(Collectors.toList());
                 if (rowNum <= query.getHeader()) {
                     header.add(list);
                 } else if (rowNum < previewRowNum) {
