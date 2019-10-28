@@ -1,6 +1,6 @@
 package com.hrms.test.bean;
 
-import java.time.LocalDateTime;
+import com.hrms.data.annotation.ImportConfig;
 
 /**
  * 测试 bean，excel数据封装成bean
@@ -8,8 +8,14 @@ import java.time.LocalDateTime;
  * @author ys
  */
 public class TestBean {
+
+    @ImportConfig("职位类型")
     private String id;
+
+    @ImportConfig("职位名称")
     private String name;
+
+    @ImportConfig("岗位职责")
     private String msg;
     private int updateTime;
     private double score;

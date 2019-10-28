@@ -1,11 +1,12 @@
 package com.hrms.data.service.impl;
 
 import com.hrms.common.ExcelUtils;
+import com.hrms.data.annotation.ImportConfig;
 import com.hrms.data.bean.ExcelCell;
+import com.hrms.data.bean.ExcelParameter;
 import com.hrms.data.bean.ExcelQuery;
 import com.hrms.data.bean.ExcelSheet;
 import com.hrms.data.service.IDataService;
-import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -14,6 +15,10 @@ import org.apache.poi.ss.util.CellRangeAddress;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -48,13 +53,18 @@ public class DataServiceImpl implements IDataService {
                         }
                     });
             List<CellRangeAddress> collect = new ArrayList<>(map.values());
-            List<List<Object>> header = new ArrayList<>(query.getHeader() + 1);
-            List<List<Object>> previewRows = new ArrayList<>(ExcelSheet.PREVIEW_ROWS);
+            List<List<ExcelCell>> header = new ArrayList<>(query.getHeader() + 1);
+            List<ExcelCell> params = new ArrayList<>(query.getHeader() + 1);
+            List<List<ExcelCell>> previewRows = new ArrayList<>(ExcelSheet.PREVIEW_ROWS);
             Iterator<Row> rowIterator = s.rowIterator();
             while (rowIterator.hasNext()) {
                 Row next = rowIterator.next();
                 int rowNum = next.getRowNum();
-                List<Object> list = StreamSupport.stream(next.spliterator(), true)
+
+                if (next.getPhysicalNumberOfCells() > params.size()) {
+                    addParams(params, next.getPhysicalNumberOfCells());
+                }
+                List<ExcelCell> list = StreamSupport.stream(next.spliterator(), true)
                         .filter(cell -> {
                             CellAddress address = cell.getAddress();
                             return !StringUtils.isEmpty(cell.toString()) || map.containsKey(address) || splitCells.containsValue(address);
@@ -68,20 +78,37 @@ public class DataServiceImpl implements IDataService {
                             }
                         })
                         .map(cell -> new ExcelCell(cell, map.get(cell.getAddress())))
+                        //收集首字符
+                        //todo : bean字段与64行冲突
+                        .peek(excelCell -> {
+                            if(rowNum == query.getHeader()){
+                                params.add(excelCell);
+                            }
+                        })
                         .collect(Collectors.toList());
                 if (rowNum <= query.getHeader()) {
+
                     header.add(list);
                 } else if (rowNum < previewRowNum) {
                     previewRows.add(list);
                 }
             }
             sheet.setHeader(header);
+            sheet.setParams(params);
             sheet.setPreviewRows(previewRows);
             sheet.setMergedRegions(collect);
             sheet.setId(s.hashCode());
             excelSheets.add(sheet);
         });
         return excelSheets;
+    }
+
+    private void addParams(List<ExcelCell> params, int dataSize) {
+        for (int i = params.size() - 1; i < dataSize; i++) {
+            ExcelCell e = new ExcelCell();
+            e.setValue(String.format("$%d", i));
+            params.add(e);
+        }
     }
 
     /**
@@ -143,5 +170,58 @@ public class DataServiceImpl implements IDataService {
         return thNames;
     }
 
+    @Override
+    public List<ExcelParameter> getParameter(Class clazz) {
+        return Arrays.stream(clazz.getDeclaredFields())
+                .filter(field -> {
+                    ImportConfig importConfig = field.getAnnotation(ImportConfig.class);
+                    return importConfig != null;
+                }).map(field -> {
+                    ExcelParameter parameter = new ExcelParameter();
+                    //class中字段名称
+                    parameter.setName(getThead(field));
+                    parameter.setId(field.getName());
+                    return parameter;
+                }).collect(Collectors.toList());
+    }
+
+    private String getThead(Field field) {
+        String columnName;
+        ImportConfig importConfig = field.getAnnotation(ImportConfig.class);
+        if (StringUtils.isEmpty(importConfig.value())) {
+            columnName = field.getName();
+        } else {
+            columnName = importConfig.value();
+        }
+        return columnName;
+    }
+
+    /**
+     * 实例插值
+     */
+
+    private void setValue(Object instantiate, Method writeMethod, Object value) throws InvocationTargetException, IllegalAccessException {
+
+        Object invoke;
+
+        Class<?> parameterType = writeMethod.getParameterTypes()[0];
+        if (String.class.equals(parameterType)) {
+            invoke = value;
+        } else {
+            Method valueOf;
+            try {
+                valueOf = parameterType.getMethod("valueOf", String.class);
+            } catch (NoSuchMethodException e) {
+                valueOf = null;
+            }
+            //静态方法调用
+            if (valueOf != null && Modifier.isStatic(valueOf.getModifiers())) {
+                invoke = valueOf.invoke(null, value);
+            } else {
+                invoke = parameterType.cast(value);
+            }
+        }
+        writeMethod.invoke(instantiate, invoke);
+    }
 
 }

@@ -236,10 +236,11 @@
                 if (res && res.code === 0) {
                     var $sheets = $('#step-2 .sheets'), $select = $('#step-2 select.sheet-sel');
                     $select.html('<option></option>');
-                    for (var x in res.data) {
-                        var _datum = res.data[x];
+                    for (var x in res.data.sheets) {
+                        var _datum = res.data.sheets[x];
                         $select.append('<option value="' + _datum.id + '" >' + _datum.name + '</option>');
                         // $sheets.find('table.sheet').removeClass('active')
+                        _datum.params = res.data.params;
                         $sheets.append(laytpl($('#tpl-sheet').html()).render(_datum))
                         // table.render({
                         //     elem: '#' + _datum.id
@@ -302,10 +303,10 @@
         <tr>
             {{# for(var i = 0; i < d.previewRows[0].length; i++) { }}
             <th>
-                <select name="${{ i } }">
+                <select name="${{i}}">
                     <option></option>
                     {{# layui.each(d.params, function(index, item){ }}
-                    <option value="{{item.value}}" {{# if( item.value== d.header[d.header.length - 1][i].value){}}
+                    <option value="{{item.id}}" {{# if( d.header[d.header.length - 1][i] ? item.name == d.header[d.header.length - 1][i].value : false){ }}
                             selected {{# } }}>{{item.name}}
                     </option>
                     {{# }); }}

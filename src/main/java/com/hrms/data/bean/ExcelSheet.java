@@ -23,11 +23,11 @@ public class ExcelSheet {
     /**
      * 标题
      */
-    private List<List<Object>> header;
+    private List<List<ExcelCell>> header;
     /**
      * 前三行数据
      */
-    private List<List<Object>> previewRows;
+    private List<List<ExcelCell>> previewRows;
     /**
      * 合并单元格
      */
@@ -35,7 +35,7 @@ public class ExcelSheet {
     /**
      * 字段名
      */
-    private List<List<Object>> params;
+    private List<ExcelCell> params;
 
     public String getName() {
         return name;
@@ -45,27 +45,27 @@ public class ExcelSheet {
         this.name = name;
     }
 
-    public List<List<Object>> getHeader() {
+    public List<List<ExcelCell>> getHeader() {
         return header;
     }
 
-    public void setHeader(List<List<Object>> header) {
+    public void setHeader(List<List<ExcelCell>> header) {
         this.header = header;
     }
 
-    public List<List<Object>> getPreviewRows() {
+    public List<List<ExcelCell>> getPreviewRows() {
         return previewRows;
     }
 
-    public void setPreviewRows(List<List<Object>> previewRows) {
+    public void setPreviewRows(List<List<ExcelCell>> previewRows) {
         this.previewRows = previewRows;
     }
 
-    public List<List<Object>> getParams() {
+    public List<ExcelCell> getParams() {
         return params;
     }
 
-    public void setParams(List<List<Object>> params) {
+    public void setParams(List<ExcelCell> params) {
         this.params = params;
     }
 
